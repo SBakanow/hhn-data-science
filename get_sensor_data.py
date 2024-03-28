@@ -8,10 +8,10 @@ import adafruit_bme680
 import board
 from busio import I2C
 
-sensor = adafruit_bme680.BME680_(board.I2C())
-#sensor = adafruit_bme680.Adafruit_BME680_I2C(i2c, debug=False)
+#sensor = adafruit_bme680.BME680_(board.I2C())
+sensor = adafruit_bme680.Adafruit_BME680_I2C(i2c, debug=False)
 #Sea level of Schwäbisch Hall
-#sensor.sea_level_pressure = 304
+sensor.sea_level_pressure = 304
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 db_file = os.path.join(script_dir, 'bme680.sqlite')
