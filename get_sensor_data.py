@@ -81,9 +81,9 @@ def read_sensor():
 
     counter += 1
     if counter > 6:
-        mean_temperature = mean(sensor_data['temperature'])
-        mean_humidity = mean(sensor_data['humidity'])
-        mean_pressure = mean(sensor_data['pressure'])
+        mean_temperature = round(mean(sensor_data['temperature']), 2)
+        mean_humidity = round(mean(sensor_data['humidity']), 2)
+        mean_pressure = round(mean(sensor_data['pressure']), 2)
         save_to_database(
             location, date, time, mean_temperature, mean_humidity, mean_pressure
         )
