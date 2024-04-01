@@ -3,19 +3,28 @@
 import os
 import sqlite3
 from datetime import datetime
+from statistics import mean
+from time import sleep
 
-import time as timee
+import adafruit_bme680
 import board
 from busio import I2C
-import adafruit_bme680
+from prometheus_client import Gauge, start_http_server
 
 i2c = I2C(board.SCL, board.SDA)
 sensor = adafruit_bme680.Adafruit_BME680_I2C(i2c, debug=False)
-#Sea level of Schwäbisch Hall
+# Sea level of Schwäbisch Hall
 sensor.sea_level_pressure = 994
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 db_file = os.path.join(script_dir, 'bme680.sqlite')
+
+gh = Gauge('humidity_percent', 'Humidity percentage measured by the Sensor')
+gt = Gauge('temperature', 'Temperature measured by the Sensor')
+gp = Gauge('pressure', 'Pressure measured by the Sensor')
+
+counter = 0
+sensor_data = {'temperature': [], 'humidity': [], 'pressure': []}
 
 
 def data_exists(location, date, time):
@@ -36,28 +45,50 @@ def data_exists(location, date, time):
             conn.close()
 
 
-def fetch_sensor_data():
+def read_sensor():
+    global counter, sensor_data
+
     location = 'Schwäbisch Hall'
-    date = datetime.now().strftime('%Y-%m-%d')
-    time = datetime.now().strftime('%H:%M:%S')
+    now = datetime.now()
+    date = now.strftime('%Y-%m-%d')
+    time = now.strftime('%H:%M:%S')
 
     if data_exists(location, date, time):
         print('Data already exists in the database.')
         return
 
-    sensor.temperature #wake up the sensor ;)
-    #init. sensor takes some time
-    timee.sleep(2) 
-    temperature = sensor.temperature
-    humidity = sensor.humidity
-    pressure = sensor.pressure
-    
-    if temperature is None or humidity is None or pressure is None:
-        print('Failed to fetch data: one or more sensor values are None')
-    else:
-        print('Data fetched successfully')
+    sensor.temperature  # wake up the sensor ;)
+    # init. sensor takes some time
+    sleep(2)
 
-    save_to_database(location, date, time, temperature, humidity, pressure)
+    try:
+        temperature = sensor.temperature
+        humidity = sensor.humidity
+        pressure = sensor.pressure
+        sensor_data['temperature'].append(temperature)
+        sensor_data['humidity'].append(humidity)
+        sensor_data['pressure'].append(pressure)
+    except RuntimeError as e:
+        print('RuntimeError: {}'.format(e))
+
+    if humidity is not None and temperature is not None and pressure is not None:
+        gh.set(humidity)
+        gt.set(temperature)
+        gp.set(pressure)
+        print('Data fetched successfully')
+    else:
+        print('Failed to fetch data: one or more sensor values are None')
+
+    counter += 1
+    if counter > 6:
+        mean_temperature = mean(sensor_data['temperature'])
+        mean_humidity = mean(sensor_data['humidity'])
+        mean_pressure = mean(sensor_data['pressure'])
+        save_to_database(
+            location, date, time, mean_temperature, mean_humidity, mean_pressure
+        )
+        sensor_data = {'temperature': [], 'humidity': [], 'pressure': []}
+        counter = 0
 
 
 def save_to_database(location, date, time, temperature, humidity, pressure):
@@ -104,4 +135,10 @@ def save_to_database(location, date, time, temperature, humidity, pressure):
 
 
 if __name__ == '__main__':
-    fetch_sensor_data()
+    metrics_port = 9070
+    start_http_server(metrics_port)
+    print('Serving sensor metrics on :{}'.format(metrics_port))
+
+    while True:
+        read_sensor()
+        sleep(30)

@@ -22,7 +22,7 @@ df_resampled['time'] = df_resampled['datetime'].dt.strftime('%H:%M:%S')
 
 df_resampled = df_resampled.drop(columns=['datetime']).assign(
     id=lambda _: _.index + 1,
-    location='Heilbronn',
+    location='Schwäbisch Hall',
     precipitation=None,
     precipitation_probability=None,
     conditions=None,
