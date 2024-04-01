@@ -4,14 +4,15 @@ import os
 import sqlite3
 from datetime import datetime
 
-import adafruit_bme680
+import time as timee
 import board
 from busio import I2C
+import adafruit_bme680
 
-#sensor = adafruit_bme680.BME680_(board.I2C())
+i2c = I2C(board.SCL, board.SDA)
 sensor = adafruit_bme680.Adafruit_BME680_I2C(i2c, debug=False)
 #Sea level of Schwäbisch Hall
-sensor.sea_level_pressure = 304
+sensor.sea_level_pressure = 994
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 db_file = os.path.join(script_dir, 'bme680.sqlite')
@@ -36,7 +37,7 @@ def data_exists(location, date, time):
 
 
 def fetch_sensor_data():
-    location = 'Heilbronn'
+    location = 'Schwäbisch Hall'
     date = datetime.now().strftime('%Y-%m-%d')
     time = datetime.now().strftime('%H:%M:%S')
 
@@ -44,10 +45,13 @@ def fetch_sensor_data():
         print('Data already exists in the database.')
         return
 
+    sensor.temperature #wake up the sensor ;)
+    #init. sensor takes some time
+    timee.sleep(2) 
     temperature = sensor.temperature
     humidity = sensor.humidity
     pressure = sensor.pressure
-
+    
     if temperature is None or humidity is None or pressure is None:
         print('Failed to fetch data: one or more sensor values are None')
     else:

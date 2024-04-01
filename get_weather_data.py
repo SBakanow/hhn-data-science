@@ -4,6 +4,8 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 
+import urllib.parse
+
 import requests
 from dotenv import load_dotenv
 
@@ -38,14 +40,15 @@ def fetch_weather_data():
         )
         return
 
-    location = 'Heilbronn'
+    location = 'Schwäbisch Hall'
+    encoded_location = urllib.parse.quote(location)
     date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
     if data_exists(location, date):
         print('Data already exists in the database.')
         return
 
-    url = f'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{location}/yesterday?unitGroup=metric&maxDistance=30000&include=hours%2Cdays&key={api_key}&contentType=json'
+    url = f'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{encoded_location}/yesterday?unitGroup=metric&maxDistance=30000&include=hours%2Cdays&key={api_key}&contentType=json'
 
     try:
         response = requests.get(url)
